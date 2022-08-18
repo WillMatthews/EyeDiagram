@@ -2,10 +2,17 @@
 Better eye diagram generation code in MATLAB. Used a lot in my DPhil Thesis.
 
 *How much better?*
+
 A before and after is provided here:
+
 ![left is a typical MATLAB eyediagram() eye diagram, right is the new function](https://github.com/WillMatthews/EyeDiagram/blob/master/img/demo.png?raw=true)
+
+
 Unlike MATLAB's built in `eyediagram()` function, the more data you provide `eyediagram_dense()` the prettier it looks, case in point (for a different communications system with a higher error rate):
+
 ![an even prettier eye diagram](https://github.com/WillMatthews/EyeDiagram/blob/master/img/demo2.png?raw=true)
+
+
 *What does your code do?*
 `eyediagram_dense` creates a raster image of an eye diagram, capturing signal density at each point on the image. This function creates a diagram, alongside returning all the important information captured within it as a MATLAB struct.
 
