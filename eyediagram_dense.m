@@ -125,11 +125,12 @@ end
 
 if sum(screen_size) == 0
     screen_size = round(500*[1,0.776]); % use default resolution
+else
     if screen_size(2) == 0
         screen_size = round(screen_size(1)*[1,0.776]); % set screen dimensions (default aspect ratio)
     end
     if screen_size(1) == 0
-        screen_size = round(screen_size(1)*[1.2886,1]); % set screen dimensions (default aspect ratio)
+        screen_size = round(screen_size(2)*[1.2886,1]); % set screen dimensions (default aspect ratio)
     end
 end
 screen = zeros(screen_size(1), screen_size(2)); % init image
@@ -142,8 +143,7 @@ sig_sliced = reshape(signal, rep, numel(signal)/rep)'; % slice up signal into 'r
 clear num2delete
 
 % y (VOLT) axis bins
-bins = linspace(min(signal),max(signal), screen_size(2));
-yscale = bins;
+yscale = linspace(min(signal),max(signal), screen_size(2));
 
 % x (TIME) axis scale (not used - only for user)
 if isempty(time)
@@ -171,13 +171,11 @@ screen = flipud(screen);    % vertical flip
 scr_out.raw_data = screen;  % store raw data
 
 
-
 %% image processing
 image = screen/max(max(screen)); % scale to 0-1
 image = sqrt(image); % gamma correction, gamma = 0.5
 image = image/max(max(image)); % rescale to 0-1
 clear screen
-
 
 
 %% plot code
@@ -222,7 +220,7 @@ try
     v2 = vhist_bin_centres(idx2+ofs);
     idxpair = abs([idx1, idx2+ofs] - screen_size(2)/2);
 catch
-    warning("Error Encountered in Locating BIT ZERO and BIT ONE");
+    warning("eyediagram_dense: Error Encountered in Locating BIT ZERO and BIT ONE");
 end
 
 
@@ -294,7 +292,7 @@ try
     end
     
 catch
-    warning("Error Encountered in Locating Zero Crossings");
+    warning("eyediagram_dense: Error Encountered in Locating Zero Crossings");
 end
 
 %% y (VOLT) axis labelling
@@ -356,7 +354,7 @@ set(hEye,'FontSize',12,'FontWeight','bold');
         powers = -9:3:9;
         prefix_id = find(pot < powers,1);
         if prefix_id < 1 || prefix_id > 9
-            warning("Could not assign unit prefix");
+            warning("eyediagram_dense: Could not assign unit prefix");
         end
         prefix = prefixes(prefix_id);
         poweroften = powers(prefix_id-1);
