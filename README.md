@@ -32,4 +32,6 @@ My goals for this repo are as follows:
 |BER estimation | From calculated Q factors we can estimate the BER. This is handy if we don't have all afternoon to resolve a 10^-12 BER.|
 |Eye Opening Metrics|Use standard textbook metrics and return to the user.|
 |Jitter|Quantify the jitter and return it to the user.|
+|Colormaps|Add colormaps for custom eye diagram output|
 |More...|I'm sure I've missed lots, but more eye diagram related features will be included|
+
