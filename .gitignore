@@ -1,4 +1,5 @@
 *.csv
 *.fig
 *.png
+*.m~
 testbench.m

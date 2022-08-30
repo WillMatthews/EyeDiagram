@@ -19,6 +19,16 @@ function [fh, scr_out] = eyediagram_dense(varargin)
 % eyediagram_dense(signal, npoints, "histogram", true)
 %     plots histograms for x crossings and signal y level. Default false.
 %
+% eyediagram_dense(signal, npoints, "xresolution", 123)
+%     sets default x axis resolution. if yresolution is not provided uses a
+%     default aspect ratio. if both xresolution and yresolution are not
+%     defined, uses a 500x388 display size
+%
+% eyediagram_dense(signal, npoints, "yresolution", 123)
+%     sets default y axis resolution if xresolution is not provided uses a
+%     default aspect ratio. if both xresolution and yresolution are not
+%     defined, uses a 500x388 display size
+%
 %
 % RETURNS:
 % [fh, scr_out] = eyediagram_dense(signal, npoints "time", time, "midbit")
@@ -28,41 +38,108 @@ function [fh, scr_out] = eyediagram_dense(varargin)
 %        scr_out.y        vector the y axis scale (one el per el in matrix)
 %        scr_out.image    image matrix after processing
 %        scr_out.raw_data raw binned signal matrix
+%
+% © William Matthews 2022
 
-%% process args
+%% Input sanitation
 
+%Verify input arguments
+switch nargin
+    case 0
+        help eyediagram_dense
+        error('eyediagram_dense: No input arguments provided. Help provided above.');
+    case 1
+        error('eyediagram_dense: Number of points per display not provided.');
+    case {3,5,7,9,11}
+        error('eyediagram_dense: Not enough input arguments.');
+end
+
+if nargin>12
+    error('eyediagram_dense: Too many input arguments.');
+end
+
+
+%% Initialise Variables for arg processing
 signal = varargin{1};
 rep    = varargin{2};
 time   = [];
 midbit = false;
 plothist = false;
+screen_size = [0,0];
 
-for i = 1:nargin
+% Orient signal vector to form a row vector
+if size(signal,1) > size(signal,2)
+    signal = signal';
+end
+
+for i = 3:nargin
     if strcmpi("time", varargin{i})
-        time = varargin{i+1};
+        tempstore = varargin{i+1};
+        % store time vector as a row vector
+        if size(tempstore,1) > size(tempstore,2)
+            tempstore = tempstore';
+        end
+        if sum(size(tempstore) ~= size(signal))
+            error('eyediagram_dense: Expected time array to be of same size as signal array.');
+        end
+        time = tempstore;
+        clear tempstore
     end
     if strcmpi("midbit", varargin{i})
+        if ~(isa(varargin{i+1},"logical") || isa(varargin{i+1},"double"))
+            error('eyediagram_dense: Expected boolean for middle of bit options.');
+        end
         midbit = varargin{i+1};
     end
     if strcmpi("histogram", varargin{i})
+        if ~(isa(varargin{i+1},"logical") || isa(varargin{i+1},"double"))
+            error('eyediagram_dense: Expected boolean for histogram options.');
+        end
         plothist = varargin{i+1};
+    end
+    if strcmpi("xresolution", varargin{i})
+        if ~(isa(varargin{i+1},"double"))
+            error('eyediagram_dense: Expected numeric for x resolution.');
+        end
+        if length(varargin{i+1}) > 1
+            error('eyediagram_dense: Expected scalar for x resoltion.');
+        end
+        if varargin{i+1} < 1
+            error('eyediagram_dense: Expected positive quantity for x resolution.');
+        end
+        screen_size(1) = varargin{i+1};
+    end
+    if strcmpi("yresolution", varargin{i})
+        if ~(isa(varargin{i+1},"double"))
+            error('eyediagram_dense: Expected scalar for y resolution.');
+        end
+        if varargin{i+1} < 1
+            error('eyediagram_dense: Expected positive quantity for y resolution.');
+        end
+        screen_size(2) = varargin{i+1};
     end
 end
 
 
-
 %% setup key variables
-scr = 500; % Set screen size in x
+
+if sum(screen_size) == 0
+    screen_size = round(500*[1,0.776]); % use default resolution
+    if screen_size(2) == 0
+        screen_size = round(screen_size(1)*[1,0.776]); % set screen dimensions (default aspect ratio)
+    end
+    if screen_size(1) == 0
+        screen_size = round(screen_size(1)*[1.2886,1]); % set screen dimensions (default aspect ratio)
+    end
+end
+screen = zeros(screen_size(1), screen_size(2)); % init image
+
 
 num2delete = rep*mod(numel(signal)/rep,1);
 num2delete = round(num2delete);
 signal = signal((num2delete + 1):end); % Truncate signal so we don't have any half-traces on plot
 sig_sliced = reshape(signal, rep, numel(signal)/rep)'; % slice up signal into 'rep' long sections
 clear num2delete
-
-
-screen_size = round(scr*[1,0.776018099547511]); % set screen dimensions (default aspect ratio)
-screen = zeros(screen_size(1), screen_size(2)); % init image
 
 % y (VOLT) axis bins
 bins = linspace(min(signal),max(signal), screen_size(2));
@@ -89,31 +166,33 @@ for i = 1:size(sig_sliced,2)
     end
 end
 
-screen = screen'; % transpose the image
-screen = flipud(screen);
-scr_out.raw_data = screen;
+screen = screen';           % transpose the image
+screen = flipud(screen);    % vertical flip
+scr_out.raw_data = screen;  % store raw data
+
+
 
 %% image processing
 image = screen/max(max(screen)); % scale to 0-1
 image = sqrt(image); % gamma correction, gamma = 0.5
 image = image/max(max(image)); % rescale to 0-1
-%image = imgaussfilt(image, 1);
 clear screen
+
+
 
 %% plot code
 fh = figure();
 hEye = axes(fh);
-if plothist
+if plothist % generate histogram axes if we are choosing to plot a histogram
     hYHist = axes(fh);
     hXHist = axes(fh);
 end
 axes(hEye);
-
-
 imshow(image);
 
+scr_out.image = image; % storage image output
 
-scr_out.image = image;
+
 
 %% auto-place y axis markers at BIT_ZERO and BIT_ONE
 try
@@ -146,6 +225,7 @@ catch
     warning("Error Encountered in Locating BIT ZERO and BIT ONE");
 end
 
+
 [~, lpFilt] = lowpass(sig_sliced(1,:), 0.1);
 try
     %% Automatically find y=0 crossings for plot labelling
@@ -161,7 +241,7 @@ try
         % edge effects
         lpsig = filter(lpFilt, [repelem(sig_sliced(i,1), lp_crop_pt), ...
             sig_sliced(i,:), repelem(sig_sliced(i,end), lp_crop_pt)]);
-        lpsig = lpsig((lp_crop_pt*2):end);
+        lpsig = lpsig((lp_crop_pt*2):end); % phase correct
         
         if sig_sliced(i,1) > 0
             zerocrossing_idx = find(lpsig<0, 1); % locate position of zero cross pos to neg
@@ -184,7 +264,7 @@ try
     clear gr tpoints tp i
     
     %% x (TIME) axis labelling
-    deform_ratio_x = scr/size(sig_sliced,2); % screen is deformed - rescale
+    deform_ratio_x = screen_size(1)/size(sig_sliced,2); % screen is deformed - rescale
     xcross = crossings*deform_ratio_x;
     xstep = mean(diff(xcross)); % find step size
     if midbit
@@ -210,49 +290,48 @@ try
     if isempty(time)
         xlabel("Bit Times");
     else
-        xlabel(strcat("Time [",xprefix, "S]"));
+        xlabel(strcat("Time [",xprefix, "s]"));
     end
     
 catch
     warning("Error Encountered in Locating Zero Crossings");
 end
 
-% image 0-388 y
-% image 0-500 x
-
 %% y (VOLT) axis labelling
-maxabssig = max(abs([max(signal), min(signal)])); % use maximum abs value of signal as reference for our scale
-[yprefix, ypoweroften] = get_prefix(maxabssig);
-[sy, si] = sort(idxpair*2);
-yticks(sy); % 0 is highest
-sv = [v1, v2]*10^(-ypoweroften);
-ticklabels = round(sv(si),1);
-yticklabels(ticklabels);
-ylabel(strcat("Voltage [",yprefix,"V]"));
+try
+    maxabssig = max(abs([max(signal), min(signal)])); % use maximum abs value of signal as reference for our scale
+    [yprefix, ypoweroften] = get_prefix(maxabssig);
+    [sy, si] = sort(idxpair*2);
+    yticks(sy); % 0 is highest
+    sv = [v1, v2]*10^(-ypoweroften);
+    ticklabels = round(sv(si),1);
+    yticklabels(ticklabels);
+    ylabel(strcat("Voltage [",yprefix,"V]"));
+catch
+    warning("Y Axis scale not plotted");
+end
 
 axis on;
 
 
 if plothist
-    deform_ratio_x = scr/size(sig_sliced,2);
+    deform_ratio_x = screen_size(1)/size(sig_sliced,2);
     axes(hXHist);
-    h0 = histogram(zerocrossing_idxs,screen_size(1)/4);
+    h0 = histogram(zerocrossing_idxs,round(screen_size(1)/4));
     h0.EdgeColor = 'none';
     h0.FaceColor = [0,0,0];
     h0.FaceAlpha = 1;
-    axis([0,screen_size(1)/deform_ratio_x, 0, inf]);
+    axis([0, size(sig_sliced,2), 0, inf]);
     
     axes(hYHist);
-    h0 = histogram(signal,screen_size(2)/4);
+    h0 = histogram(signal, round(screen_size(2)/4));
     h0.EdgeColor = 'none';
     h0.FaceColor = [0,0,0];
     h0.FaceAlpha = 1;
     hYHist.View=[90,-90];
     axis([min(signal), max(signal), 0, inf]);
     
-    
-    
-    pause(0.1);
+    pause(0.1); % trigger a relenquish
     hEye.OuterPosition = [0,0,0.85,0.85];
     
     hXHist.OuterPosition = [0.041,0.8,0.805,0.2];
@@ -283,6 +362,3 @@ set(hEye,'FontSize',12,'FontWeight','bold');
         poweroften = powers(prefix_id-1);
     end
 end
-
-
-
