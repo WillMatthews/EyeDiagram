@@ -1,7 +1,7 @@
 # EyeDiagram
 Better eye diagram generation code in MATLAB. Used a lot in my DPhil Thesis.
 
-[![View Density Eye Diagram on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/116910-density-eye-diagram)
+[![View Eye Diagram Density Plot on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/116910-eye-diagram-density-plot)
 
 *How much better?*
 
